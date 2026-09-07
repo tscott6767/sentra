@@ -43,12 +43,82 @@ sentra/
 
 ```bash
 git clone https://github.com/tscott6767/sentra && cd sentra
-echo "OPENROUTER_API_KEY=sk-..." > .env
+cp .env.example .env
 ./build.sh
-# → Sentra is up: http://localhost:3000  (admin / your password)
+# → Sentra is up: http://localhost:3000
 ```
 
 Cloud-only needs just an OpenRouter key. Local LLM (llama.cpp + NVIDIA GPU) is opt-in via `.env` + a compose override — see `docs/local-llm.md` (roadmap).
+
+Then finish the **Post-install setup** below (set keys, create the admin account, add the memory plugin + tools).
+
+---
+
+## Post-install setup (first run, ~10 min)
+
+`build.sh` brings up the stack, but a few steps are manual. Do them once, in your browser.
+
+### 1. Open the web UI
+
+```bash
+hostname -I        # inside the container — get its IP
+```
+
+Browse to `http://<IP>:3000` from any device on your network.
+
+### 2. Create the admin account
+
+The first user you create becomes admin — there's no pre-set login. Just sign up.
+
+### 3. Set your keys
+
+```bash
+openssl rand -hex 24          # → use as ROUTER_API_KEY
+nano .env                     # set ROUTER_API_KEY + OPENROUTER_API_KEY
+docker compose up -d          # restart to apply
+```
+
+### 4. Add the memory plugin (Filter + Tool)
+
+The Filter and Tool live in **different places** in the Open WebUI UI:
+
+| What | Paste this file | Into |
+|------|-----------------|------|
+| Memory Filter | `memory-plugin/memory_filter.py` | Admin → Functions → New Filter |
+| Memory Tool | `memory-plugin/memory_tool.py` | Workspace → Tools → New Tool |
+
+```bash
+cat memory-plugin/memory_filter.py   # copy → paste into Admin → Functions
+cat memory-plugin/memory_tool.py     # copy → paste into Workspace → Tools
+```
+
+Enable **Global** + activate on each.
+
+### 5. System prompt
+
+Paste `core/system-prompt.md` into **Admin → Settings → General** (fill in `{{USER_NAME}}` etc.).
+
+### 6. Connect the model router
+
+**Admin → Settings → Connections → OpenAI API**:
+- URL: `http://sentra-router:9100/v1`
+- Key: your `ROUTER_API_KEY` from `.env`
+
+Then add models `sentra-auto`, `sentra-local`, `sentra-cheap`, `sentra-std`, `sentra-code`.
+
+### 7. Add the MCP tool servers
+
+**Admin → Settings → Tools → Tool Servers → Add**:
+- MCP-Filesystem: `http://mcp-filesystem:8001`
+- MCP-Exec: `http://mcp-exec:8004`
+
+### 8. Attach the Memory Tool to your model
+
+**Workspace → Models → edit your model → enable "Memory Tool v5"**.
+
+> The hostnames `sentra-router`, `mcp-filesystem`, `mcp-exec` resolve only inside
+> the Docker network (`sentra-net`) — that's why they work from Open WebUI without
+> needing IPs.
 
 ---
 
@@ -94,4 +164,4 @@ See `core/SPEC.md` for the full schema, layer model, and component status.
 
 ## License
 
-MIT — see `LICENSE`.
+GPL-3.0 — see `LICENSE`.

@@ -16,7 +16,7 @@ OWUI_URL="${OWUI_URL:-http://localhost:3000}"
 EMAIL="${OWUI_ADMIN_EMAIL:-admin@localhost.local}"
 PASSWORD="${OWUI_ADMIN_PASSWORD:-change-me}"
 
-GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+GREEN=$'\033[0;32m'; YELLOW=$'\033[1;33m'; CYAN=$'\033[0;36m'; NC=$'\033[0m'
 step() { echo -e "\n${GREEN}==> $*${NC}"; }
 warn() { echo -e "${YELLOW}⚠️  $*${NC}"; }
 info() { echo -e "${CYAN}   $*${NC}"; }
@@ -89,7 +89,7 @@ ${CYAN}════════════════════════�
 ${YELLOW}1 · Memory plugin (if API injection failed)${NC}
    Admin → Functions → New Filter  → name "Memory Filter v5.1"
      paste memory-plugin/memory_filter.py · Global ON · activate
-   Admin → Functions → New Tool    → name "Memory Tool v5"
+   Workspace → Tools → New Tool      → name "Memory Tool v5"
      paste memory-plugin/memory_tool.py · Global ON · activate
 
 ${YELLOW}2 · System prompt${NC}
