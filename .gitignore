@@ -1,0 +1,22 @@
+# Secrets — never commit
+.env
+
+# Runtime data (shared project dir + exec sandbox)
+data/
+
+# Local LLM weights (large, gitignored)
+models/
+
+# Cloned memory plugin (keep the README, ignore the cloned source)
+memory-plugin/*
+!memory-plugin/README.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS / editor
+.DS_Store
+*.swp
+*~

@@ -1,0 +1,44 @@
+# Sentra — a self-hosted household AI stack.
+# Copyright (C) 2026 Tony Scott
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# docker-compose.llama.yml — opt-in local LLM tier (NVIDIA GPU required)
+
+Adds a llama.cpp server to the Sentra stack so the router's "local" tier has
+something to route to. **Optional** — the stack runs cloud-only without this.
+
+## Usage
+
+```bash
+# 1. Put your GGUF model in ./models/ (e.g. ./models/Qwen3.8-27B.gguf)
+# 2. Edit sentra-router/config.json: set tiers.local.base_url → http://llama-server:8080/v1
+#    and tiers.local.model → /models/<your-model>.gguf
+# 3. Bring up both files:
+docker compose -f docker-compose.yml -f docker-compose.llama.yml up -d --build
+```
+
+Requires:
+- NVIDIA GPU + `nvidia-container-toolkit` installed on the host
+  (verify with: `docker run --rm --gpus all nvidia/cuda:12.0.0-base-ubuntu22.04 nvidia-smi`)
+
+```yaml
+services:
+  llama-server:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: sentra-llama
+    command: ["-m", "/models/model.gguf", "--host", "0.0.0.0", "--port", "8080", "-ngl", "99"]
+    volumes:
+      - ./models:/models
+    ports:
+      - "8080:8080"
+    networks:
+      - sentra-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+```

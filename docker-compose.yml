@@ -1,0 +1,74 @@
+# Sentra — a self-hosted household AI stack.
+# Copyright (C) 2026 Tony Scott
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Sentra — docker-compose
+# Four services: Open WebUI (+memory plugin), model router, MCP filesystem, exec sandbox.
+# All on one shared bridge network.
+
+services:
+  openwebui:
+    build: ./openwebui
+    container_name: sentra-openwebui
+    environment:
+      - WEBUI_NAME=Sentra
+      - ENABLE_SIGNUP=false
+      # First-run admin is created from .env values on boot.
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-}
+    volumes:
+      - openwebui-data:/app/backend/data
+      # Memory plugin core — bind-mounted (hot-swap: edit file, restart container)
+      - ./memory-plugin/memory_core.py:/app/backend/data/memory_core.py:ro
+    ports:
+      - "3000:8080"
+    networks:
+      - sentra-net
+    restart: unless-stopped
+
+  sentra-router:
+    build: ./sentra-router
+    container_name: sentra-router
+    env_file: .env
+    volumes:
+      # config.json bind-mounted read-only for hot-swap (single edit point)
+      - ./sentra-router/config.json:/app/config.json:ro
+      - router-spend:/data/spend
+    ports:
+      - "9100:9100"
+    networks:
+      - sentra-net
+    restart: unless-stopped
+
+  mcp-filesystem:
+    build: ./mcp-filesystem
+    container_name: sentra-mcp-filesystem
+    # mcpo bridges the official filesystem MCP server (stdio) to HTTP/SSE
+    command: ["--port", "8001", "--host", "0.0.0.0", "--", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/data"]
+    volumes:
+      - ./data:/data
+    ports:
+      - "8001:8001"
+    networks:
+      - sentra-net
+    restart: unless-stopped
+
+  mcp-exec:
+    build: ./mcp-exec
+    container_name: sentra-mcp-exec
+    environment:
+      - SANDBOX_DIR=/sandbox
+    volumes:
+      - ./data/sandbox:/sandbox
+    ports:
+      - "8004:8004"
+    networks:
+      - sentra-net
+    restart: unless-stopped
+
+networks:
+  sentra-net:
+    driver: bridge
+
+volumes:
+  openwebui-data:
+  router-spend:

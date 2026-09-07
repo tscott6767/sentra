@@ -1,0 +1,138 @@
+{
+  "_meta": {
+    "name": "Sentra Router v2",
+    "version": "2.0.0",
+    "license": "GPL-3.0-or-later",
+    "copyright": "Copyright (C) 2026 Tony Scott",
+    "spec": "core/SPEC.md",
+    "single_edit_point": true,
+    "note": "Model/provider swaps edit THIS file only — NEVER code. Provider-agnostic: any OpenAI-compatible endpoint works by editing base_url + model + api_key_env + auth_type (bearer|x-api-key) + stream_usage (bool) + prices. The 'local' tier is OPTIONAL — point it at your llama.cpp server, or leave it unreachable and requests fall back to cloud."
+  },
+  "router": {
+    "host": "0.0.0.0",
+    "port": 9100,
+    "api_key_env": "ROUTER_API_KEY",
+    "timeout_seconds": 120,
+    "retries": 0,
+    "fallback_notice": true,
+    "local_upstream_stream": false,
+    "spend_log_dir": "/data/spend"
+  },
+  "tiers": {
+    "local": {
+      "provider": "openai",
+      "base_url": "http://localhost:8080/v1",
+      "model": "/models/your-local-model.gguf",
+      "api_key_env": null,
+      "capabilities": {
+        "tools": true,
+        "vision": false,
+        "coding": false,
+        "context_tokens": 262144
+      },
+      "price_in_usd_per_mtok": 0.0,
+      "price_out_usd_per_mtok": 0.0,
+      "note": "OPTIONAL local llama.cpp tier. Set base_url to your llama-server and model to your .gguf path. If unreachable, requests fall back to cheap/std via fallback_chains. FREE."
+    },
+    "cheap": {
+      "provider": "openrouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "model": "moonshotai/kimi-k2.6",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "auth_type": "bearer",
+      "stream_usage": true,
+      "capabilities": {
+        "tools": true,
+        "vision": true,
+        "coding": false,
+        "context_tokens": 256000
+      },
+      "price_in_usd_per_mtok": 0.52,
+      "price_out_usd_per_mtok": 2.18,
+      "note": "DEFAULT tier + vision tier + fallback for local."
+    },
+    "std": {
+      "provider": "openrouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "model": "z-ai/glm-5.3",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "auth_type": "bearer",
+      "stream_usage": true,
+      "capabilities": {
+        "tools": true,
+        "vision": false,
+        "coding": false,
+        "context_tokens": 1000000
+      },
+      "price_in_usd_per_mtok": 1.15,
+      "price_out_usd_per_mtok": 3.50,
+      "note": "Huge-context tier (>150K tokens) + std fallback. 1M ctx."
+    },
+    "code": {
+      "provider": "openrouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "model": "qwen/qwen3-coder-next",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "auth_type": "bearer",
+      "stream_usage": true,
+      "capabilities": {
+        "tools": true,
+        "vision": false,
+        "coding": true,
+        "context_tokens": 256000
+      },
+      "price_in_usd_per_mtok": 0.12,
+      "price_out_usd_per_mtok": 0.80,
+      "note": "Coding tier."
+    }
+  },
+  "model_aliases": {
+    "sentra-auto": { "route": "auto" },
+    "sentra-local": { "route": "local" },
+    "sentra-cheap": { "route": "cheap" },
+    "sentra-std": { "route": "std" },
+    "sentra-code": { "route": "code" }
+  },
+  "classifier": {
+    "short_chat_token_limit": 4000,
+    "large_prompt_token_limit": 150000,
+    "code_fence_markers": ["```", "```python", "```js", "```javascript", "```ts", "```typescript", "```go", "```rust", "```sh", "```bash", "```sql", "```dockerfile", "```html", "```css", "```java", "```c++", "```cpp"],
+    "code_keywords": ["python", "javascript", "typescript", "react", "node.js", "rust", "golang", "go ", "docker", "dockerfile", "sql", "bash script", "fastapi", "pytest", "unit test", "refactor"],
+    "internal_task_hints": { "stream": false, "json_shaped": true, "small": true },
+    "note": "Thresholds tunable here without redeploy. Rule precedence lives in app.py classifier."
+  },
+  "fallback_chains": {
+    "local": ["cheap", "std"],
+    "cheap": ["std"],
+    "std": [],
+    "code": ["cheap", "std"]
+  },
+  "privacy_gate": {
+    "enabled": true,
+    "patterns": [
+      "(api[_-]?key|apikey|secret|password|passwd|token|private[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|cvv|cvc)[\\s]*[:=][\\s]*[a-z0-9+/_.-]{6,}",
+      "sk-[a-z0-9_-]{16,}",
+      "AKIA[0-9A-Z]{16}",
+      "gh[pousr]_[a-z0-9]{20,}",
+      "hf_[a-z0-9]{20,}",
+      "xox[baprs]-[a-z0-9-]{10,}",
+      "ci_live_[a-z0-9_-]{8,}",
+      "eyJ[a-z0-9_-]{12,}",
+      "bearer [a-z0-9._-]{20,}",
+      "[0-9a-f]{40,}",
+      "BEGIN [A-Z ]*PRIVATE KEY",
+      "\\d{3}-\\d{2}-\\d{4}",
+      "\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{4}"
+    ],
+    "on_match": "local_only",
+    "local_down_action": "deny"
+  },
+  "sanitizer": {
+    "enabled": true,
+    "tiers": [],
+    "tool_role_text": "[Tool result] {content}",
+    "tool_call_text": "[Tool call: {name}({args})]",
+    "null_content_replacement": "",
+    "note": "DORMANT (tiers=[]). Re-enable by adding a tier ONLY if a future local model lacks tool support."
+  }
+}
