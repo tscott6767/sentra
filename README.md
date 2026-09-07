@@ -34,7 +34,8 @@ sentra/
 │   └── system-prompt.md    # Sentra persona + memory protocol + guardrails
 ├── memory-plugin/          # memory + knowledge system v5.2
 ├── sentra-router/          # budget model router (FastAPI)
-└── mcp-exec/               # server-side code-execution sandbox
+├── mcp-exec/               # server-side code-execution sandbox
+└── sentra-face/            # optional add-on: talking-face avatar (userscript)
 ```
 
 ---
